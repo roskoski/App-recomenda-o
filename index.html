@@ -1,827 +1,861 @@
+# app.py
+
+from flask import Flask, render_template_string, request, redirect, url_for, session
+import random
+import math
+
+app = Flask(__name__)
+app.secret_key = 'super_secret_key' # Chave secreta para gerenciar sessões
+
+# Dados fictícios de filmes
+FILMES = {
+'1': {'titulo': 'Aventura nas Estrelas', 'generos': ['Ficção Científica', 'Aventura'], 'poster_url':
+'https://picsum.photos/300/450?random=1'},
+'2': {'titulo': 'O Último Cavaleiro', 'generos': ['Ação', 'Fantasia'], 'poster_url':
+'https://picsum.photos/300/450?random=2'},
+'3': {'titulo': 'Romance em Paris', 'generos': ['Romance', 'Comédia'], 'poster_url':
+'https://picsum.photos/300/450?random=3'},
+'4': {'titulo': 'Código da Mente', 'generos': ['Suspense', 'Drama'], 'poster_url':
+'https://picsum.photos/300/450?random=4'},
+'5': {'titulo': 'Mistério na Floresta', 'generos': ['Suspense', 'Aventura'], 'poster_url':
+'https://picsum.photos/300/450?random=5'},
+'6': {'titulo': 'Heróis do Futuro', 'generos': ['Ação', 'Ficção Científica'], 'poster_url':
+'https://picsum.photos/300/450?random=6'},
+'7': {'titulo': 'Um Dia de Sol', 'generos': ['Comédia', 'Romance'], 'poster_url':
+'https://picsum.photos/300/450?random=7'},
+'8': {'titulo': 'O Despertar da Magia', 'generos': ['Fantasia', 'Aventura'], 'poster_url':
+'https://picsum.photos/300/450?random=8'},
+'9': {'titulo': 'A Invasão Silenciosa', 'generos': ['Ficção Científica', 'Suspense'], 'poster_url':
+'https://picsum.photos/300/450?random=9'},
+'10': {'titulo': 'Vida de um Pintor', 'generos': ['Drama', 'Biografia'], 'poster_url':
+'https://picsum.photos/300/450?random=10'},
+'11': {'titulo': 'Corrida Mortal', 'generos': ['Ação', 'Aventura'], 'poster_url':
+'https://picsum.photos/300/450?random=11'},
+'12': {'titulo': 'Amor à Segunda Vista', 'generos': ['Romance', 'Comédia'], 'poster_url':
+'https://picsum.photos/300/450?random=12'},
+'13': {'titulo': 'Segredos da Família', 'generos': ['Drama', 'Mistério'], 'poster_url':
+'https://picsum.photos/300/450?random=13'},
+'14': {'titulo': 'Cyber-Guerreiros', 'generos': ['Ação', 'Ficção Científica'], 'poster_url':
+'https://picsum.photos/300/450?random=14'},
+'15': {'titulo': 'O Mistério do Castelo', 'generos': ['Aventura', 'Fantasia'], 'poster_url':
+'https://picsum.photos/300/450?random=15'},
+}
+
+GENEROS = sorted(list(set(g for f in FILMES.values() for g in f['generos'])))
+
+# Funções do sistema de recomendação
+
+def sigmoid(x):
+return 1 / (1 + math.exp(-x))
+
+def calcular_probabilidade(filme, usuario_generos, avaliacoes):
+# Baseado na similaridade de gênero e popularidade (simulada)
+generos_comuns = set(filme['generos']).intersection(set(usuario_generos))
+similaridade = len(generos_comuns) / len(filme['generos']) if filme['generos'] else 0
+
+# Simula uma pontuação de popularidade e a adiciona à similaridade
+popularidade_simulada = random.uniform(0.1, 0.5)
+pontuacao = (similaridade * 3) + popularidade_simulada
+
+# Aplica a função sigmoide para converter a pontuação em uma porcentagem
+probabilidade = sigmoid(pontuacao) * 100
+
+# Penaliza filmes já avaliados
+for filme_id, avaliacao in avaliacoes.items():
+if filme_id == filme_id:
+probabilidade *= 0.1 # Reduz a chance de recomendar algo já visto
+break
+
+return max(0, min(100, probabilidade))
+
+def get_recomendacoes(usuario_generos, avaliacoes):
+recomendacoes_gerais = []
+
+for filme_id, filme_info in FILMES.items():
+if filme_id not in avaliacoes: # Não recomenda filmes já avaliados
+probabilidade = calcular_probabilidade(filme_info, usuario_generos, avaliacoes)
+motivo = f"Com base nos seus gostos por {', '.join(filme_info['generos'])}"
+
+# Adiciona um motivo mais específico se houver similaridade
+if len(set(filme_info['generos']).intersection(set(usuario_generos))) > 0:
+generos_comuns = set(filme_info['generos']).intersection(set(usuario_generos))
+motivo = f"Você gostou de {', '.join(generos_comuns)}, e este filme é do mesmo gênero."
+
+recomendacoes_gerais.append({
+'id': filme_id,
+'titulo': filme_info['titulo'],
+'poster_url': filme_info['poster_url'],
+'generos': filme_info['generos'],
+'probabilidade': int(probabilidade),
+'motivo': motivo
+})
+
+# Ordena por probabilidade em ordem decrescente
+recomendacoes_gerais.sort(key=lambda x: x['probabilidade'], reverse=True)
+return recomendacoes_gerais
+
+# Rotas do Flask e templates embutidos
+
+@app.route('/', methods=['GET', 'POST'])
+def cadastro():
+if request.method == 'POST':
+nome = request.form.get('nome')
+idade = request.form.get('idade')
+generos_selecionados = request.form.getlist('generos')
+
+session['usuario'] = {
+'nome': nome,
+'idade': idade,
+'generos': generos_selecionados,
+}
+session['avaliacoes'] = {}
+session['watchlist'] = []
+return redirect(url_for('home'))
+
+html = """
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cine Sugestão</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Bem-Vindo!</title>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #121212;
-            color: #e0e0e0;
-            margin: 0;
-            padding: 0;
-            line-height: 1.6;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-        .header {
-            background-color: #1f1f1f;
-            padding: 1rem 2rem;
-            border-radius: 12px;
-            margin-bottom: 2rem;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-            flex-wrap: wrap;
-        }
-        .header h1 {
+            min-height: 100vh;
             margin: 0;
-            font-size: 1.8rem;
         }
-        .nav {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-        .nav a {
-            color: #e0e0e0;
-            text-decoration: none;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            transition: background-color 0.3s, color 0.3s;
-        }
-        .nav a:hover {
-            background-color: #333;
-            color: #fff;
-        }
-        .content {
-            background-color: #1f1f1f;
-            padding: 2rem;
+
+        .container {
+            background-color: white;
+            padding: 2em;
             border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-        }
-        .form-card {
-            background-color: #2a2a2a;
-            padding: 2rem;
-            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
             max-width: 500px;
-            margin: 2rem auto;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-        }
-        h2 {
-            color: #fff;
-            font-weight: 600;
-            margin-top: 0;
-        }
-        .genre-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 0.75rem;
-        }
-        .genre-item {
-            background-color: #333;
-            color: #fff;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
+            width: 90%;
             text-align: center;
+        }
+
+        h1 {
+            color: #1a73e8;
+            margin-bottom: 0.5em;
+        }
+
+        p {
+            color: #666;
+            margin-bottom: 1.5em;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 1em;
+            text-align: left;
+        }
+
+        label {
+            font-weight: 600;
+            color: #444;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            padding: 0.8em;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            width: calc(100% - 1.6em);
+        }
+
+        .generos-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5em;
+        }
+
+        .generos-grid label {
+            display: flex;
+            align-items: center;
+            font-weight: normal;
             cursor: pointer;
-            transition: background-color 0.3s;
-            border: 2px solid transparent;
         }
-        .genre-item:hover {
-            background-color: #555;
+
+        input[type="checkbox"] {
+            margin-right: 0.5em;
         }
-        .genre-item.selected {
-            background-color: #007bff;
-            border-color: #007bff;
-        }
-        .btn {
-            background-color: #007bff;
+
+        button {
+            background-color: #1a73e8;
             color: white;
-            padding: 0.75rem 1.5rem;
+            padding: 0.8em;
             border: none;
             border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
             cursor: pointer;
             transition: background-color 0.3s;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-block;
-            margin-top: 1rem;
+            margin-top: 1em;
         }
-        .btn:hover {
-            background-color: #0056b3;
-        }
-        .input-group {
-            margin-bottom: 1rem;
-        }
-        .input-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-        }
-        .input-group input, .input-group select {
-            width: 100%;
-            padding: 0.75rem;
-            border-radius: 8px;
-            border: 1px solid #444;
-            background-color: #333;
-            color: #e0e0e0;
-        }
-        .movie-card-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-top: 1rem;
-        }
-        .movie-card {
-            background-color: #2a2a2a;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-            transition: transform 0.2s, box-shadow 0.2s;
-            cursor: pointer;
-            text-decoration: none;
-            color: #e0e0e0;
-        }
-        .movie-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
-        }
-        .movie-card img {
-            width: 100%;
-            height: 300px;
-            object-fit: cover;
-        }
-        .movie-info {
-            padding: 1rem;
-        }
-        .movie-info h3 {
-            margin-top: 0;
-            font-size: 1.2rem;
-            height: 3rem;
-            overflow: hidden;
-        }
-        .tag {
-            background-color: #444;
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            margin-right: 0.5rem;
-            display: inline-block;
-            margin-bottom: 0.5rem;
-        }
-        .rating-buttons button {
-            background-color: #333;
-            border: 1px solid #444;
-            color: #e0e0e0;
-            padding: 0.5rem;
-            border-radius: 8px;
-            margin-right: 0.25rem;
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
-        }
-        .rating-buttons button:hover {
-            background-color: #555;
-            transform: scale(1.05);
-        }
-        .rating-buttons .selected {
-            background-color: #007bff;
-            border-color: #007bff;
-        }
-        .details-page {
-            display: flex;
-            gap: 2rem;
-        }
-        .details-page img {
-            width: 300px;
-            height: auto;
-            border-radius: 12px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-        .movie-details {
-            flex: 1;
-        }
-        .movie-details h2 {
-            font-size: 2.5rem;
-            margin-top: 0;
-            color: #fff;
-        }
-        .movie-details p {
-            color: #ccc;
-        }
-        .profile-scores p {
-            background-color: #2a2a2a;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 0.5rem;
-        }
-        #search-form {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-        #search-form input {
-            flex-grow: 1;
-        }
-        @media (max-width: 768px) {
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .nav {
-                margin-top: 1rem;
-            }
-            .details-page {
-                flex-direction: column;
-            }
-            .details-page img {
-                width: 100%;
-            }
+
+        button:hover {
+            background-color: #155bb5;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
-        <header class="header">
-            <h1>Cine Sugestão</h1>
-            <nav class="nav">
-                <a href="#recommended" id="nav-recommended">Recomendados</a>
-                <a href="#explore" id="nav-explore">Explorar</a>
-                <a href="#watchlist" id="nav-watchlist">Minha Lista</a>
-                <a href="#my_scores" id="nav-my-scores">Minhas Notas</a>
-                <a href="#search" id="nav-search">Busca</a>
-            </nav>
-        </header>
-        <main class="content" id="app-content">
-            <!-- O conteúdo das páginas será renderizado aqui pelo JavaScript -->
-        </main>
+        <h1>Filmes Recomendados</h1>
+        <p>Comece preenchendo seu perfil para receber as melhores recomendações.</p>
+        <form method="post">
+            <label for="nome">Nome:</label>
+            <input type="text" id="nome" name="nome" required>
+            <label for="idade">Idade:</label>
+            <input type="number" id="idade" name="idade" required>
+            <label>Gêneros de Filmes Favoritos:</label>
+            <div class="generos-grid">
+                {% for genero in generos %}
+                <label><input type="checkbox" name="generos" value="{{ genero }}">{{ genero }}</label>
+                {% endfor %}
+            </div>
+            <button type="submit">Começar a Explorar</button>
+        </form>
     </div>
-
-    <script>
-        // --- Dados do Aplicativo (simulando um banco de dados em memória) ---
-        const GENRES = [
-            "Ação", "Aventura", "Comédia", "Drama", "Ficção Científica",
-            "Fantasia", "Suspense", "Terror", "Animação", "Documentário",
-            "Romance", "Crime", "Mistério", "Musical", "História"
-        ];
-
-        const MOVIES = {
-            1: {
-                title: "A Origem",
-                poster_url: "https://m.media-amazon.com/images/I/91t79wB58TL._AC_SL1500_.jpg",
-                genres: ["Ação", "Ficção Científica", "Suspense"],
-                description: "Dom Cobb é um ladrão com a rara habilidade de invadir os sonhos das pessoas e roubar seus segredos do subconsciente. Ele recebe uma oferta para plantar uma ideia em vez de roubá-la.",
-                popularity: 0.95
-            },
-            2: {
-                title: "Interestelar",
-                poster_url: "https://m.media-amazon.com/images/I/914Tz2i0GEL._AC_SL1500_.jpg",
-                genres: ["Ficção Científica", "Aventura", "Drama"],
-                description: "Em um futuro distópico, a humanidade luta para sobreviver. Um grupo de exploradores viaja através de um buraco de minhoca no espaço em uma tentativa de garantir a sobrevivência da raça humana.",
-                popularity: 0.92
-            },
-            3: {
-                title: "O Poderoso Chefão",
-                poster_url: "https://m.media-amazon.com/images/I/81+S12mH8wL._AC_SL1500_.jpg",
-                genres: ["Crime", "Drama"],
-                description: "O patriarca da família do crime Corleone transfere o controle de seu império clandestino para seu filho relutante.",
-                popularity: 0.98
-            },
-            4: {
-                title: "A Rede Social",
-                poster_url: "https://m.media-amazon.com/images/I/719h+n1P46L._AC_SL1500_.jpg",
-                genres: ["Drama", "História"],
-                description: "A história de como o Facebook foi criado e a disputa legal que se seguiu entre Mark Zuckerberg e seus antigos parceiros de negócio.",
-                popularity: 0.88
-            },
-            5: {
-                title: "Pulp Fiction",
-                poster_url: "https://m.media-amazon.com/images/I/715b+a1tU3L._AC_SL1500_.jpg",
-                genres: ["Crime", "Drama"],
-                description: "As vidas de dois assassinos de aluguel, um boxeador, a esposa de um gangster e um par de assaltantes de restaurante se entrelaçam em quatro contos de violência e redenção.",
-                popularity: 0.94
-            },
-            6: {
-                title: "E.T. O Extraterrestre",
-                poster_url: "https://m.media-amazon.com/images/I/61G+4t-f05L._AC_SL1200_.jpg",
-                genres: ["Ficção Científica", "Fantasia"],
-                description: "Uma criatura alienígena é acidentalmente deixada para trás na Terra e faz amizade com um garoto solitário.",
-                popularity: 0.85
-            },
-            7: {
-                title: "Os Incríveis",
-                poster_url: "https://m.media-amazon.com/images/I/81577dY1cIL._AC_SL1500_.jpg",
-                genres: ["Animação", "Ação", "Aventura"],
-                description: "Uma família de super-heróis tenta viver uma vida suburbana normal, mas são forçados a voltar à ação para salvar o mundo.",
-                popularity: 0.90
-            },
-            8: {
-                title: "A Viagem de Chihiro",
-                poster_url: "https://m.media-amazon.com/images/I/8140JkK9b6L._AC_SL1500_.jpg",
-                genres: ["Animação", "Fantasia"],
-                description: "Uma garota de 10 anos se perde em um mundo de espíritos, deuses e bruxas, e deve trabalhar em uma casa de banho para sobreviver e encontrar uma maneira de voltar para casa.",
-                popularity: 0.91
-            },
-            9: {
-                title: "O Senhor dos Anéis: A Sociedade do Anel",
-                poster_url: "https://m.media-amazon.com/images/I/71uIqYf75EL._AC_SL1494_.jpg",
-                genres: ["Aventura", "Fantasia"],
-                description: "Um jovem hobbit herda um anel e embarca em uma jornada épica para destruí-lo e salvar a Terra Média do Senhor dos Anéis.",
-                popularity: 0.96
-            },
-            10: {
-                title: "O Fabuloso Destino de Amélie Poulain",
-                poster_url: "https://m.media-amazon.com/images/I/811F3h3h5WL._AC_SL1500_.jpg",
-                genres: ["Comédia", "Romance"],
-                description: "Amélie, uma garçonete inocente e ingênua em Paris, decide mudar a vida das pessoas ao seu redor para melhor.",
-                popularity: 0.87
-            },
-            11: {
-                title: "Parasita",
-                poster_url: "https://m.media-amazon.com/images/I/71Y8+J0t9pL._AC_SL1500_.jpg",
-                genres: ["Drama", "Suspense", "Comédia"],
-                description: "A família Ki-taek, desempregada, se infiltra na rica família Park e um incidente inesperado ameaça destruir sua nova vida.",
-                popularity: 0.93
-            },
-            12: {
-                title: "Whiplash: Em Busca da Perfeição",
-                poster_url: "https://m.media-amazon.com/images/I/71jQx54g2SL._AC_SL1500_.jpg",
-                genres: ["Drama", "Musical"],
-                description: "Um jovem baterista talentoso é levado ao limite por seu professor de música obsessivo em uma das melhores escolas de música do país.",
-                popularity: 0.89
-            },
-            13: {
-                title: "O Iluminado",
-                poster_url: "https://m.media-amazon.com/images/I/910q32n8q+L._AC_SL1500_.jpg",
-                genres: ["Terror", "Suspense"],
-                description: "Um escritor e sua família se tornam os zeladores de um hotel isolado durante o inverno. Ele é gradualmente consumido pela loucura enquanto forças sobrenaturais se manifestam.",
-                popularity: 0.91
-            },
-            14: {
-                title: "O Resgate do Soldado Ryan",
-                poster_url: "https://m.media-amazon.com/images/I/918u-f+zI7L._AC_SL1500_.jpg",
-                genres: ["Ação", "Drama", "História"],
-                description: "Em meio à invasão da Normandia durante a Segunda Guerra Mundial, um esquadrão de soldados é enviado em uma missão para resgatar um paraquedista.",
-                popularity: 0.90
-            },
-            15: {
-                title: "Toy Story",
-                poster_url: "https://m.media-amazon.com/images/I/71gVl1H2gBL._AC_SL1500_.jpg",
-                genres: ["Animação", "Comédia"],
-                description: "Um boneco de cowboy é aterrorizado por um novo e moderno brinquedo espacial que se torna o favorito de seu dono.",
-                popularity: 0.88
-            },
-            16: {
-                title: "Matrix",
-                poster_url: "https://m.media-amazon.com/images/I/81+m42B9xPL._AC_SL1500_.jpg",
-                genres: ["Ação", "Ficção Científica"],
-                description: "Um programador de computador descobre que a realidade que conhece é uma simulação de computador criada por máquinas inteligentes.",
-                popularity: 0.94
-            }
-        };
-
-        // --- Lógica de Recomendação e Gerenciamento de Estado ---
-
-        function sigmoid(x) {
-            return 1 / (1 + Math.exp(-x));
-        }
-
-        function calculateUserProfile(ratings) {
-            const userProfile = GENRES.reduce((acc, genre) => {
-                acc[genre] = 0;
-                return acc;
-            }, {});
-
-            if (Object.keys(ratings).length === 0) {
-                return userProfile;
-            }
-
-            for (const [movieId, rating] of Object.entries(ratings)) {
-                const movie = MOVIES[movieId];
-                if (movie) {
-                    const weight = (rating - 3) / 2;
-                    movie.genres.forEach(genre => {
-                        userProfile[genre] += weight;
-                    });
-                }
-            }
-            
-            const maxVal = Math.max(...Object.values(userProfile).map(Math.abs)) || 1;
-            for (const genre in userProfile) {
-                userProfile[genre] /= maxVal;
-            }
-
-            return userProfile;
-        }
-        
-        function getRecommendations(userProfile, ratedMoviesIds) {
-            const recommendations = [];
-            const allMovieIds = Object.keys(MOVIES).map(Number);
-            const unratedMoviesIds = allMovieIds.filter(id => !ratedMoviesIds.includes(id));
-
-            for (const movieId of unratedMoviesIds) {
-                const movie = MOVIES[movieId];
-                let score = 0;
-                movie.genres.forEach(genre => {
-                    score += userProfile[genre] || 0;
-                });
-                score += movie.popularity * 0.5;
-                if (movie.genres.length > 1) {
-                    score -= (movie.genres.length - 1) * 0.1;
-                }
-                
-                const probability = Math.round(sigmoid(score) * 100);
-                const reasons = Object.keys(userProfile).filter(genre => userProfile[genre] > 0.1).map(genre => `Combina com seu interesse em ${genre}`);
-                const reason = reasons.length ? reasons[Math.floor(Math.random() * reasons.length)] : "Baseado em seus gostos";
-                
-                recommendations.push({
-                    id: movieId,
-                    title: movie.title,
-                    poster_url: movie.poster_url,
-                    probability: probability,
-                    reason: reason,
-                    description: movie.description,
-                    genres: movie.genres
-                });
-            }
-
-            recommendations.sort((a, b) => b.probability - a.probability);
-            return recommendations.slice(0, 10);
-        }
-
-        // --- Gerenciamento de Páginas e UI ---
-
-        let state = {
-            currentPage: 'home',
-            user: JSON.parse(localStorage.getItem('user')) || null,
-            ratings: JSON.parse(localStorage.getItem('ratings')) || {},
-            userProfile: JSON.parse(localStorage.getItem('userProfile')) || {},
-            watchlist: JSON.parse(localStorage.getItem('watchlist')) || [],
-            exploreFilter: '',
-            searchQuery: ''
-        };
-
-        const appContent = document.getElementById('app-content');
-
-        function navigate(page, params = {}) {
-            window.location.hash = page;
-            state.currentPage = page;
-            Object.assign(state, params);
-            renderPage();
-        }
-
-        window.onhashchange = () => {
-            const hash = window.location.hash.substring(1);
-            if (hash) {
-                const [page, id] = hash.split('/');
-                navigate(page, { movieId: id ? parseInt(id) : null });
-            } else {
-                navigate('home');
-            }
-        };
-
-        function renderPage() {
-            appContent.innerHTML = '';
-            
-            if (!state.user && state.currentPage !== 'home') {
-                navigate('home');
-                return;
-            }
-
-            switch(state.currentPage) {
-                case 'home':
-                    renderHomePage();
-                    break;
-                case 'recommended':
-                    renderRecommendedPage();
-                    break;
-                case 'explore':
-                    renderExplorePage();
-                    break;
-                case 'details':
-                    renderDetailsPage(state.movieId);
-                    break;
-                case 'watchlist':
-                    renderWatchlistPage();
-                    break;
-                case 'my_scores':
-                    renderMyScoresPage();
-                    break;
-                case 'search':
-                    renderSearchPage();
-                    break;
-            }
-        }
-
-        function renderHomePage() {
-            const html = `
-                <div class="form-card">
-                    <h2>Bem-vindo(a) ao Cine Sugestão!</h2>
-                    <p>Para começar, nos conte um pouco sobre você e seus gêneros favoritos. Isso nos ajudará a encontrar os filmes perfeitos!</p>
-                    <form id="register-form">
-                        <div class="input-group">
-                            <label for="name">Nome:</label>
-                            <input type="text" id="name" name="name" required>
-                        </div>
-                        <div class="input-group">
-                            <label for="age">Idade:</label>
-                            <input type="number" id="age" name="age" required>
-                        </div>
-                        <div class="input-group">
-                            <label>Escolha 3 ou mais gêneros:</label>
-                            <div class="genre-grid">
-                                ${GENRES.map(genre => `<div class="genre-item" data-genre="${genre}">${genre}</div>`).join('')}
-                            </div>
-                        </div>
-                        <button type="submit" class="btn">Cadastrar e Ver Recomendações</button>
-                    </form>
-                </div>
-            `;
-            appContent.innerHTML = html;
-
-            const form = document.getElementById('register-form');
-            const genreItems = document.querySelectorAll('.genre-item');
-            let selectedGenres = new Set();
-
-            genreItems.forEach(item => {
-                item.addEventListener('click', () => {
-                    const genre = item.dataset.genre;
-                    if (selectedGenres.has(genre)) {
-                        selectedGenres.delete(genre);
-                        item.classList.remove('selected');
-                    } else {
-                        selectedGenres.add(genre);
-                        item.classList.add('selected');
-                    }
-                });
-            });
-
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                if (selectedGenres.size < 3) {
-                    alert('Por favor, selecione pelo menos 3 gêneros.');
-                    return;
-                }
-                const name = document.getElementById('name').value;
-                const age = document.getElementById('age').value;
-                state.user = { name, age, initialGenres: Array.from(selectedGenres) };
-                state.ratings = {};
-                state.watchlist = [];
-                state.userProfile = GENRES.reduce((acc, genre) => {
-                    acc[genre] = selectedGenres.has(genre) ? 1 : 0;
-                    return acc;
-                }, {});
-                localStorage.setItem('user', JSON.stringify(state.user));
-                localStorage.setItem('ratings', JSON.stringify(state.ratings));
-                localStorage.setItem('userProfile', JSON.stringify(state.userProfile));
-                navigate('recommended');
-            });
-        }
-
-        function renderRecommendedPage() {
-            const recommendations = getRecommendations(state.userProfile, Object.keys(state.ratings).map(Number));
-            const html = `
-                <h2>Filmes Recomendados para Você</h2>
-                <p>Olá, ${state.user.name}! Aqui estão os filmes que achamos que você vai gostar, baseados no seu perfil e nas suas avaliações.</p>
-                <div class="movie-card-grid">
-                    ${recommendations.map(movie => `
-                        <div class="movie-card">
-                            <a href="#details/${movie.id}">
-                                <img src="${movie.poster_url}" alt="Poster de ${movie.title}" onerror="this.onerror=null;this.src='https://placehold.co/200x300/1e1e1e/888?text=Sem+Poster';">
-                            </a>
-                            <div class="movie-info">
-                                <h3>${movie.title}</h3>
-                                <p class="tag-row">
-                                    <span class="tag">Chance: ${movie.probability}%</span>
-                                </p>
-                                <p>${movie.reason}</p>
-                                <div class="rating-buttons" data-movie-id="${movie.id}">
-                                    ${[1, 2, 3, 4, 5].map(i => `<button data-rating="${i}">${i}</button>`).join('')}
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-            appContent.innerHTML = html;
-            addRatingEventListeners();
-        }
-
-        function renderExplorePage() {
-            const genresHTML = GENRES.map(genre => `<option value="${genre}" ${state.exploreFilter === genre ? 'selected' : ''}>${genre}</option>`).join('');
-            const moviesToShow = state.exploreFilter ? Object.values(MOVIES).filter(m => m.genres.includes(state.exploreFilter)) : Object.values(MOVIES);
-            const sortedMovies = moviesToShow.sort((a, b) => b.popularity - a.popularity);
-            
-            const moviesHTML = sortedMovies.map(movie => `
-                <div class="movie-card">
-                    <a href="#details/${Object.keys(MOVIES).find(key => MOVIES[key] === movie)}">
-                        <img src="${movie.poster_url}" alt="Poster de ${movie.title}" onerror="this.onerror=null;this.src='https://placehold.co/200x300/1e1e1e/888?text=Sem+Poster';">
-                    </a>
-                    <div class="movie-info">
-                        <h3>${movie.title}</h3>
-                        <p>Avalie este filme:</p>
-                        <div class="rating-buttons" data-movie-id="${Object.keys(MOVIES).find(key => MOVIES[key] === movie)}">
-                            ${[1, 2, 3, 4, 5].map(i => `<button data-rating="${i}">${i}</button>`).join('')}
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
-            const html = `
-                <h2>Explorar Filmes</h2>
-                <p>Use os filtros para encontrar novos filmes. Você pode avaliá-los aqui mesmo!</p>
-                <div class="input-group">
-                    <label for="genre-filter">Filtrar por Gênero:</label>
-                    <select id="genre-filter" name="genre">
-                        <option value="">Todos</option>
-                        ${genresHTML}
-                    </select>
-                </div>
-                <div class="movie-card-grid">
-                    ${moviesHTML}
-                </div>
-            `;
-            appContent.innerHTML = html;
-            
-            document.getElementById('genre-filter').addEventListener('change', (e) => {
-                state.exploreFilter = e.target.value;
-                renderExplorePage();
-            });
-            addRatingEventListeners();
-        }
-
-        function renderDetailsPage(movieId) {
-            const movie = MOVIES[movieId];
-            if (!movie) {
-                appContent.innerHTML = "<h2>Filme não encontrado.</h2>";
-                return;
-            }
-
-            const userRating = state.ratings[movieId] || 'Não avaliado';
-            const similarMovies = getSimilarMovies(movieId);
-
-            const similarHTML = similarMovies.map(similar => `
-                <div class="movie-card" onclick="navigate('details', { movieId: ${similar.id} })">
-                    <img src="${similar.poster_url}" alt="Poster de ${similar.title}" onerror="this.onerror=null;this.src='https://placehold.co/200x300/1e1e1e/888?text=Sem+Poster';">
-                    <div class="movie-info">
-                        <h3>${similar.title}</h3>
-                        <p class="tag-row"><span class="tag">Similaridade: ${similar.probability}%</span></p>
-                    </div>
-                </div>
-            `).join('');
-
-            const html = `
-                <div class="details-page">
-                    <img src="${movie.poster_url}" alt="Poster de ${movie.title}" onerror="this.onerror=null;this.src='https://placehold.co/300x450/1e1e1e/888?text=Sem+Poster';">
-                    <div class="movie-details">
-                        <h2>${movie.title}</h2>
-                        <p><strong>Gêneros:</strong> ${movie.genres.join(', ')}</p>
-                        <p><strong>Sinopse:</strong> ${movie.description}</p>
-                        <p><strong>Sua Nota:</strong> ${userRating}</p>
-                        <div class="rating-buttons" data-movie-id="${movieId}">
-                            ${[1, 2, 3, 4, 5].map(i => `<button data-rating="${i}" class="${userRating == i ? 'selected' : ''}">${i}</button>`).join('')}
-                        </div>
-                        <h3 style="margin-top: 2rem;">Filmes Similares</h3>
-                        <div class="movie-card-grid">
-                            ${similarHTML}
-                        </div>
-                    </div>
-                </div>
-            `;
-            appContent.innerHTML = html;
-            addRatingEventListeners();
-        }
-
-        function getSimilarMovies(movieId) {
-            const movie = MOVIES[movieId];
-            const ratedMoviesIds = Object.keys(state.ratings).map(Number);
-            const otherMovies = Object.keys(MOVIES).filter(mid => Number(mid) !== movieId && !ratedMoviesIds.includes(Number(mid)));
-            
-            const similarMovies = otherMovies.map(mid => {
-                const m = MOVIES[mid];
-                let score = 0;
-                movie.genres.forEach(genre => {
-                    if (m.genres.includes(genre)) {
-                        score += 1;
-                    }
-                });
-
-                const probability = Math.round(sigmoid(score) * 100);
-                return { id: Number(mid), title: m.title, poster_url: m.poster_url, probability };
-            }).filter(m => m.probability > 0);
-            
-            similarMovies.sort((a, b) => b.probability - a.probability);
-            return similarMovies.slice(0, 5);
-        }
-
-        function renderWatchlistPage() {
-            const watchlistMovies = state.watchlist.map(id => MOVIES[id]).filter(Boolean);
-            const moviesHTML = watchlistMovies.map(movie => `
-                <div class="movie-card">
-                    <a href="#details/${Object.keys(MOVIES).find(key => MOVIES[key] === movie)}">
-                        <img src="${movie.poster_url}" alt="Poster de ${movie.title}" onerror="this.onerror=null;this.src='https://placehold.co/200x300/1e1e1e/888?text=Sem+Poster';">
-                    </a>
-                    <div class="movie-info">
-                        <h3>${movie.title}</h3>
-                        <p>Avalie este filme:</p>
-                        <div class="rating-buttons" data-movie-id="${Object.keys(MOVIES).find(key => MOVIES[key] === movie)}">
-                            ${[1, 2, 3, 4, 5].map(i => `<button data-rating="${i}">${i}</button>`).join('')}
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
-            const html = `
-                <h2>Minha Lista (Watchlist)</h2>
-                <p>Aqui estão os filmes que você adicionou à sua lista para assistir mais tarde.</p>
-                ${watchlistMovies.length > 0 ? `<div class="movie-card-grid">${moviesHTML}</div>` : `<p>Sua lista está vazia. Adicione filmes para assistir mais tarde na página de detalhes!</p>`}
-            `;
-            appContent.innerHTML = html;
-            addRatingEventListeners();
-        }
-
-        function renderMyScoresPage() {
-            const userProfile = calculateUserProfile(state.ratings);
-            const scoresHTML = Object.entries(userProfile).map(([genre, score]) => `
-                <p><strong>${genre}:</strong> ${(score * 100).toFixed(2)}%</p>
-            `).join('');
-
-            const html = `
-                <h2>Minhas Notas e Perfil de Gêneros</h2>
-                <p>Este é o seu perfil de gostos. As pontuações abaixo refletem sua afinidade com cada gênero, baseada nas suas avaliações.</p>
-                <div class="profile-scores">
-                    ${scoresHTML}
-                </div>
-            `;
-            appContent.innerHTML = html;
-        }
-
-        function renderSearchPage() {
-            const query = state.searchQuery.toLowerCase();
-            const searchResults = Object.entries(MOVIES).filter(([id, movie]) => movie.title.toLowerCase().includes(query));
-            const moviesHTML = searchResults.map(([id, movie]) => `
-                <div class="movie-card">
-                    <a href="#details/${id}">
-                        <img src="${movie.poster_url}" alt="Poster de ${movie.title}" onerror="this.onerror=null;this.src='https://placehold.co/200x300/1e1e1e/888?text=Sem+Poster';">
-                    </a>
-                    <div class="movie-info">
-                        <h3>${movie.title}</h3>
-                        <p>Avalie este filme:</p>
-                        <div class="rating-buttons" data-movie-id="${id}">
-                            ${[1, 2, 3, 4, 5].map(i => `<button data-rating="${i}">${i}</button>`).join('')}
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
-            const html = `
-                <h2>Busca de Filmes</h2>
-                <form id="search-form">
-                    <input type="text" id="query" name="query" value="${state.searchQuery}" placeholder="Buscar por título..." required>
-                    <button type="submit" class="btn">Buscar</button>
-                </form>
-                ${query && searchResults.length === 0 ? `<p>Nenhum filme encontrado para "${state.searchQuery}".</p>` : ''}
-                <div class="movie-card-grid">
-                    ${moviesHTML}
-                </div>
-            `;
-            appContent.innerHTML = html;
-            
-            document.getElementById('search-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                state.searchQuery = document.getElementById('query').value;
-                renderSearchPage();
-            });
-            addRatingEventListeners();
-        }
-
-        function addRatingEventListeners() {
-            document.querySelectorAll('.rating-buttons').forEach(container => {
-                const movieId = container.dataset.movieId;
-                container.querySelectorAll('button').forEach(button => {
-                    button.addEventListener('click', () => {
-                        const rating = parseInt(button.dataset.rating);
-                        state.ratings[movieId] = rating;
-                        localStorage.setItem('ratings', JSON.stringify(state.ratings));
-                        state.userProfile = calculateUserProfile(state.ratings);
-                        localStorage.setItem('userProfile', JSON.stringify(state.userProfile));
-                        
-                        // Re-render a página para refletir a nova avaliação
-                        renderPage();
-                    });
-                });
-            });
-        }
-
-        // --- Inicialização da Aplicação ---
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            if (window.location.hash) {
-                const [page, id] = window.location.hash.substring(1).split('/');
-                navigate(page, { movieId: id ? parseInt(id) : null });
-            } else if (state.user) {
-                navigate('recommended');
-            } else {
-                navigate('home');
-            }
-        });
-    </script>
 </body>
+
 </html>
+"""
+return render_template_string(html, generos=GENEROS)
+
+def base_html(title, content, active_page=''):
+nav_links = [
+('home', 'Início'),
+('recomendados', 'Recomendados'),
+('explorar', 'Explorar'),
+('watchlist', 'Minha Lista'),
+('perfil', 'Minhas Notas'),
+('busca', 'Busca'),
+]
+
+html = f"""
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <style>
+        body {
+
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+
+        }
+
+        .header {
+
+            background-color: white;
+            padding: 1em;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+
+        }
+
+        .logo {
+
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #1a73e8;
+            text-decoration: none;
+
+        }
+
+        .nav {
+
+            display: flex;
+            gap: 1.5em;
+
+        }
+
+        .nav a {
+
+            text-decoration: none;
+            color: #555;
+            font-weight: 500;
+            padding: 0.5em 0;
+            transition: color 0.3s;
+
+        }
+
+        .nav a.active {
+
+            color: #1a73e8;
+            border-bottom: 2px solid #1a73e8;
+
+        }
+
+        .nav a:hover {
+
+            color: #1a73e8;
+
+        }
+
+        .content {
+
+            padding: 2em;
+            max-width: 1200px;
+            margin: 0 auto;
+
+        }
+
+        h1 {
+
+            color: #1a73e8;
+            margin-bottom: 1em;
+
+        }
+
+        .movie-grid {
+
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5em;
+
+        }
+
+        .movie-card {
+
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+
+        }
+
+        .movie-card img {
+
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            border-radius: 12px 12px 0 0;
+
+        }
+
+        .card-info {
+
+            padding: 1em;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+
+        }
+
+        .card-info h3 {
+
+            margin-top: 0;
+            margin-bottom: 0.5em;
+            font-size: 1.1em;
+
+        }
+
+        .card-info p {
+
+            font-size: 0.9em;
+            color: #666;
+            margin: 0;
+            flex-grow: 1;
+
+        }
+
+        .card-probabilidade {
+
+            font-weight: bold;
+            color: #1a73e8;
+            margin-top: 0.5em;
+
+        }
+
+        .rating-form {
+
+            margin-top: 1em;
+            display: flex;
+            justify-content: center;
+
+        }
+
+        .rating-form select {
+
+            padding: 0.5em;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+
+        }
+
+        .rating-form button {
+
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 0.5em 1em;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: 0.5em;
+
+        }
+
+        .detail-container {
+
+            display: flex;
+            gap: 2em;
+            align-items: flex-start;
+
+        }
+
+        .detail-container img {
+
+            width: 300px;
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+        }
+
+        .detail-info {
+
+            flex: 1;
+
+        }
+
+        .detail-info h1 {
+
+            margin-top: 0;
+
+        }
+
+        .tag {
+
+            background-color: #e6e6e6;
+            padding: 0.3em 0.8em;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-right: 0.5em;
+            color: #555;
+            display: inline-block;
+            margin-bottom: 0.5em;
+
+        }
+
+        .profile-stats {
+
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1em;
+            margin-top: 1em;
+
+        }
+
+        .stat-card {
+
+            background-color: white;
+            padding: 1em;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+        }
+
+        .stat-card h3 {
+
+            color: #1a73e8;
+            margin-top: 0;
+
+        }
+
+        .search-form {
+
+            display: flex;
+            gap: 0.5em;
+            margin-bottom: 2em;
+
+        }
+
+        .search-form input {
+
+            flex-grow: 1;
+            padding: 0.8em;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+
+        }
+
+        .search-form button {
+
+            background-color: #1a73e8;
+            color: white;
+            padding: 0.8em 1.5em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <a href="/" class="logo">Recomenda Filmes</a>
+        <nav class="nav">
+            {% for endpoint, name in nav_links %}
+            <a href="{{ url_for(endpoint) }}" class="{{ 'active' if active_page == endpoint else '' }}">{{ name }}</a>
+            {% endfor %}
+        </nav>
+    </header>
+    <main class="content">
+        {content}
+    </main>
+</body>
+
+</html>
+"""
+return html
+
+@app.route('/home')
+def home():
+if 'usuario' not in session:
+return redirect(url_for('cadastro'))
+
+usuario = session['usuario']
+avaliacoes = session.get('avaliacoes', {})
+recomendacoes = get_recomendacoes(usuario['generos'], avaliacoes)[:6]
+
+html_content = f"""
+<h1>Bem-vindo(a), {usuario['nome']}!</h1>
+<p>Aqui estão algumas recomendações iniciais com base nos seus gêneros favoritos: {', '.join(usuario['generos'])}.</p>
+<div class="movie-grid">
+    {% for filme in recomendacoes %}
+    <div class="movie-card">
+        <a href="{{ url_for('detalhes', filme_id=filme.id) }}"><img src="{{ filme.poster_url }}"
+                alt="{{ filme.titulo }}"></a>
+        <div class="card-info">
+            <h3><a href="{{ url_for('detalhes', filme_id=filme.id) }}" style="text-decoration: none; color: inherit;">{{
+                    filme.titulo }}</a></h3>
+            <p>{{ filme.motivo }}</p>
+            <span class="card-probabilidade">{{ filme.probabilidade }}% de você gostar</span>
+            <form action="{{ url_for('avaliar') }}" method="post" class="rating-form">
+                <input type="hidden" name="filme_id" value="{{ filme.id }}">
+                <select name="avaliacao">
+                    <option value="1">⭐</option>
+                    <option value="2">⭐⭐</option>
+                    <option value="3">⭐⭐⭐</option>
+                    <option value="4">⭐⭐⭐⭐</option>
+                    <option value="5">⭐⭐⭐⭐⭐</option>
+                </select>
+                <button type="submit">Avaliar</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+"""
+return render_template_string(base_html('Início', html_content, 'home'), recomendacoes=recomendacoes)
+
+@app.route('/avaliar', methods=['POST'])
+def avaliar():
+filme_id = request.form.get('filme_id')
+avaliacao = int(request.form.get('avaliacao'))
+if 'avaliacoes' not in session:
+session['avaliacoes'] = {}
+
+# Atualiza a avaliação e a "popularidade" do filme
+session['avaliacoes'][filme_id] = {
+'avaliacao': avaliacao,
+'titulo': FILMES[filme_id]['titulo']
+}
+
+# Recalcula as recomendações após a avaliação
+session.modified = True
+return redirect(url_for('recomendados'))
+
+@app.route('/recomendados')
+def recomendados():
+if 'usuario' not in session:
+return redirect(url_for('cadastro'))
+
+usuario = session['usuario']
+avaliacoes = session.get('avaliacoes', {})
+
+recomendacoes_dinamicas = get_recomendacoes(usuario['generos'], avaliacoes)
+
+html_content = f"""
+<h1>Recomendações Dinâmicas</h1>
+<p>Nossas sugestões se ajustaram com base nas suas avaliações recentes!</p>
+<div class="movie-grid">
+    {% for filme in recomendacoes_dinamicas %}
+    <div class="movie-card">
+        <a href="{{ url_for('detalhes', filme_id=filme.id) }}"><img src="{{ filme.poster_url }}"
+                alt="{{ filme.titulo }}"></a>
+        <div class="card-info">
+            <h3><a href="{{ url_for('detalhes', filme_id=filme.id) }}" style="text-decoration: none; color: inherit;">{{
+                    filme.titulo }}</a></h3>
+            <p>{{ filme.motivo }}</p>
+            <span class="card-probabilidade">{{ filme.probabilidade }}% de você gostar</span>
+            <form action="{{ url_for('avaliar') }}" method="post" class="rating-form">
+                <input type="hidden" name="filme_id" value="{{ filme.id }}">
+                <select name="avaliacao">
+                    <option value="1">⭐</option>
+                    <option value="2">⭐⭐</option>
+                    <option value="3">⭐⭐⭐</option>
+                    <option value="4">⭐⭐⭐⭐</option>
+                    <option value="5">⭐⭐⭐⭐⭐</option>
+                </select>
+                <button type="submit">Avaliar</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+"""
+return render_template_string(base_html('Recomendados', html_content, 'recomendados'),
+recomendacoes_dinamicas=recomendacoes_dinamicas)
+
+@app.route('/explorar')
+def explorar():
+if 'usuario' not in session:
+return redirect(url_for('cadastro'))
+
+sort_by = request.args.get('sort', 'titulo')
+genre_filter = request.args.get('genre', 'all')
+
+filmes_filtrados = [
+{'id': fid, **finfo}
+for fid, finfo in FILMES.items()
+if genre_filter == 'all' or genre_filter in finfo['generos']
+]
+
+if sort_by == 'titulo':
+filmes_filtrados.sort(key=lambda x: x['titulo'])
+elif sort_by == 'generos':
+filmes_filtrados.sort(key=lambda x: x['generos'][0] if x['generos'] else '')
+
+html_content = f"""
+<h1>Explorar Filmes</h1>
+<div class="search-form" style="margin-bottom: 1em; align-items: center;">
+    <label for="sort_by">Ordenar por:</label>
+    <select id="sort_by"
+        onchange="window.location.href = '?sort=' + this.value + '&genre={{ request.args.get('genre', 'all') }}'">
+        <option value="titulo" {{ 'selected' if sort_by=='titulo' else '' }}>Título</option>
+        <option value="generos" {{ 'selected' if sort_by=='generos' else '' }}>Gênero</option>
+    </select>
+    <label for="genre_filter" style="margin-left: 1em;">Filtrar por Gênero:</label>
+    <select id="genre_filter"
+        onchange="window.location.href = '?sort={{ request.args.get('sort', 'titulo') }}' + '&genre=' + this.value">
+        <option value="all" {{ 'selected' if genre_filter=='all' else '' }}>Todos</option>
+        {% for genero in generos %}
+        <option value="{{ genero }}" {{ 'selected' if genre_filter==genero else '' }}>{{ genero }}</option>
+        {% endfor %}
+    </select>
+</div>
+<div class="movie-grid">
+    {% for filme in filmes %}
+    <div class="movie-card">
+        <a href="{{ url_for('detalhes', filme_id=filme.id) }}"><img src="{{ filme.poster_url }}"
+                alt="{{ filme.titulo }}"></a>
+        <div class="card-info">
+            <h3><a href="{{ url_for('detalhes', filme_id=filme.id) }}" style="text-decoration: none; color: inherit;">{{
+                    filme.titulo }}</a></h3>
+            <p>{{ ', '.join(filme.generos) }}</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+"""
+return render_template_string(base_html('Explorar', html_content, 'explorar'), filmes=filmes_filtrados, generos=GENEROS,
+sort_by=sort_by, genre_filter=genre_filter)
+
+@app.route('/detalhes/<filme_id>')
+    def detalhes(filme_id):
+    filme = FILMES.get(filme_id)
+    if not filme:
+    return "Filme não encontrado", 404
+
+    recomendacoes_similares = [
+    {'id': fid, **finfo}
+    for fid, finfo in FILMES.items()
+    if set(filme['generos']).intersection(finfo['generos']) and fid != filme_id
+    ][:4]
+
+    html_content = f"""
+    <div class="detail-container">
+        <img src="{{ filme.poster_url }}" alt="{{ filme.titulo }}">
+        <div class="detail-info">
+            <h1>{{ filme.titulo }}</h1>
+            <p><strong>Gêneros:</strong> {% for genero in filme.generos %}<span class="tag">{{ genero }}</span>{% endfor
+                %}</p>
+            <p><strong>Sinopse (Fictícia):</strong> Este é um filme sobre uma emocionante jornada que explora temas de
+                amizade, coragem e superação. Prepare-se para uma aventura inesquecível!</p>
+            <form action="{{ url_for('adicionar_watchlist', filme_id=filme.id) }}" method="post"
+                style="margin-top: 2em;">
+                <button type="submit">Adicionar à Minha Lista</button>
+            </form>
+        </div>
+    </div>
+    <div style="margin-top: 4em;">
+        <h2>Filmes Similares</h2>
+        <div class="movie-grid">
+            {% for filme_sim in similares %}
+            <div class="movie-card">
+                <a href="{{ url_for('detalhes', filme_id=filme_sim.id) }}"><img src="{{ filme_sim.poster_url }}"
+                        alt="{{ filme_sim.titulo }}"></a>
+                <div class="card-info">
+                    <h3><a href="{{ url_for('detalhes', filme_id=filme_sim.id) }}"
+                            style="text-decoration: none; color: inherit;">{{ filme_sim.titulo }}</a></h3>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    """
+    return render_template_string(base_html(filme['titulo'], html_content), filme=filme,
+    similares=recomendacoes_similares)
+
+    @app.route('/adicionar_watchlist/<filme_id>', methods=['POST'])
+        def adicionar_watchlist(filme_id):
+        if 'watchlist' not in session:
+        session['watchlist'] = []
+
+        if filme_id not in session['watchlist']:
+        session['watchlist'].append(filme_id)
+        session.modified = True
+
+        return redirect(url_for('watchlist'))
+
+        @app.route('/watchlist')
+        def watchlist():
+        if 'watchlist' not in session:
+        session['watchlist'] = []
+
+        filmes_watchlist = [
+        {'id': fid, **FILMES[fid]} for fid in session['watchlist'] if fid in FILMES
+        ]
+
+        html_content = f"""
+        <h1>Minha Lista de Filmes</h1>
+        <p>Filmes que você salvou para assistir depois.</p>
+        {% if not filmes %}
+        <p>Sua lista está vazia. Adicione filmes na página de Detalhes!</p>
+        {% else %}
+        <div class="movie-grid">
+            {% for filme in filmes %}
+            <div class="movie-card">
+                <a href="{{ url_for('detalhes', filme_id=filme.id) }}"><img src="{{ filme.poster_url }}"
+                        alt="{{ filme.titulo }}"></a>
+                <div class="card-info">
+                    <h3><a href="{{ url_for('detalhes', filme_id=filme.id) }}"
+                            style="text-decoration: none; color: inherit;">{{ filme.titulo }}</a></h3>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        """
+        return render_template_string(base_html('Minha Lista', html_content, 'watchlist'), filmes=filmes_watchlist)
+
+        @app.route('/perfil')
+        def perfil():
+        if 'avaliacoes' not in session:
+        return redirect(url_for('cadastro'))
+
+        avaliacoes = session['avaliacoes']
+
+        # Gera um perfil de gosto baseado nas avaliações
+        generos_notas = {}
+        for filme_id, info in avaliacoes.items():
+        filme_generos = FILMES.get(filme_id, {}).get('generos', [])
+        for genero in filme_generos:
+        generos_notas[genero] = generos_notas.get(genero, {'soma': 0, 'count': 0})
+        generos_notas[genero]['soma'] += info['avaliacao']
+        generos_notas[genero]['count'] += 1
+
+        perfil_por_genero = {
+        genero: round(info['soma'] / info['count'], 1)
+        for genero, info in generos_notas.items()
+        }
+
+        html_content = f"""
+        <h1>Minhas Notas e Perfil</h1>
+        <p>Seu perfil de gosto com base nos filmes que você avaliou.</p>
+        <div class="profile-stats">
+            {% for genero, nota in perfil %}
+            <div class="stat-card">
+                <h3>{{ genero }}</h3>
+                <p>Nota média: <strong>{{ nota }} / 5</strong></p>
+            </div>
+            {% endfor %}
+        </div>
+        <div style="margin-top: 2em;">
+            <h2>Meus Filmes Avaliados</h2>
+            <ul>
+                {% for filme_id, info in avaliacoes.items() %}
+                <li><strong>{{ info.titulo }}</strong> - Nota: {{ info.avaliacao }} ⭐</li>
+                {% endfor %}
+            </ul>
+        </div>
+        """
+        return render_template_string(base_html('Minhas Notas', html_content, 'perfil'),
+        perfil=perfil_por_genero.items(), avaliacoes=avaliacoes)
+
+        @app.route('/busca', methods=['GET'])
+        def busca():
+        query = request.args.get('q', '').lower()
+        resultados = [
+        {'id': fid, **finfo}
+        for fid, finfo in FILMES.items()
+        if query in finfo['titulo'].lower() or any(query in g.lower() for g in finfo['generos'])
+        ]
+
+        html_content = f"""
+        <h1>Buscar Filmes</h1>
+        <form action="{{ url_for('busca') }}" method="get" class="search-form">
+            <input type="text" name="q" placeholder="Buscar por título ou gênero..." value="{{ query }}">
+            <button type="submit">Buscar</button>
+        </form>
+
+        {% if query and not resultados %}
+        <p>Nenhum resultado encontrado para "{{ query }}".</p>
+        {% elif resultados %}
+        <h2>Resultados da Busca</h2>
+        <div class="movie-grid">
+            {% for filme in resultados %}
+            <div class="movie-card">
+                <a href="{{ url_for('detalhes', filme_id=filme.id) }}"><img src="{{ filme.poster_url }}"
+                        alt="{{ filme.titulo }}"></a>
+                <div class="card-info">
+                    <h3><a href="{{ url_for('detalhes', filme_id=filme.id) }}"
+                            style="text-decoration: none; color: inherit;">{{ filme.titulo }}</a></h3>
+                    <p>{{ ', '.join(filme.generos) }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        """
+        return render_template_string(base_html('Busca', html_content, 'busca'), resultados=resultados, query=query)
+
+        if __name__ == '__main__':
+        app.run(debug=True)
