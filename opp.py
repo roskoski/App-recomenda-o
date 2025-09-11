@@ -142,17 +142,16 @@ def calculate_user_profile(user_ratings):
     if not user_ratings:
         return user_profile
 
-    total_ratings = sum(1 for _, rating in user_ratings.items() if rating > 0)
-    if total_ratings == 0:
-        return user_profile
-
     for movie_id, rating in user_ratings.items():
         movie = MOVIES.get(int(movie_id))
         if movie:
+            # Pondera o gênero com base na avaliação (1-5)
+            # Aumenta a pontuação para avaliações altas, diminui para baixas
+            # O fator (rating - 3) centraliza a pontuação em 0 para uma avaliação 3
+            # As avaliações acima de 3 têm um impacto positivo e as abaixo, um negativo
+            weight = (rating - 3) / 2
             for genre in movie["genres"]:
-                # Pondera o gênero com base na avaliação (1-5)
-                # Aumenta a pontuação para avaliações altas, diminui para baixas
-                user_profile[genre] += (rating - 3) / 2
+                user_profile[genre] += weight
 
     # Normaliza o perfil do usuário para evitar pontuações extremas
     max_val = max(abs(v) for v in user_profile.values()) or 1
@@ -310,7 +309,7 @@ CSS = """
         display: block;
         margin-bottom: 0.5rem;
     }
-    .input-group input {
+    .input-group input, .input-group select {
         width: 100%;
         padding: 0.75rem;
         border-radius: 8px;
@@ -579,6 +578,7 @@ EXPLORE_HTML = """
                 </a>
                 <div class="movie-info">
                     <h3>{{ movie.title }}</h3>
+                    <p>Avalie este filme:</p>
                     <div class="rating-buttons">
                         {% for i in range(1, 6) %}
                             <button onclick="rateMovie({{ movie.id }}, {{ i }})">{{ i }}</button>
