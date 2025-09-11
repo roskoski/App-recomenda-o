@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cine Sugestão</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .header {
+            background-color: #1f1f1f;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            flex-wrap: wrap;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+        .nav {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .nav a {
+            color: #e0e0e0;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .nav a:hover {
+            background-color: #333;
+            color: #fff;
+        }
+        .content {
+            background-color: #1f1f1f;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        .form-card {
+            background-color: #2a2a2a;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 500px;
+            margin: 2rem auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        h2 {
+            color: #fff;
+            font-weight: 600;
+            margin-top: 0;
+        }
+        .genre-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 0.75rem;
+        }
+        .genre-item {
+            background-color: #333;
+            color: #fff;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            border: 2px solid transparent;
+        }
+        .genre-item:hover {
+            background-color: #555;
+        }
+        .genre-item.selected {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 1rem;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .input-group {
+            margin-bottom: 1rem;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background-color: #333;
+            color: #e0e0e0;
+        }
+        .movie-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+        .movie-card {
+            background-color: #2a2a2a;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            text-decoration: none;
+            color: #e0e0e0;
+        }
+        .movie-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+        }
+        .movie-card img {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+        }
+        .movie-info {
+            padding: 1rem;
+        }
+        .movie-info h3 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            height: 3rem;
+            overflow: hidden;
+        }
+        .tag {
+            background-color: #444;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+        .rating-buttons button {
+            background-color: #333;
+            border: 1px solid #444;
+            color: #e0e0e0;
+            padding: 0.5rem;
+            border-radius: 8px;
+            margin-right: 0.25rem;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .rating-buttons button:hover {
+            background-color: #555;
+            transform: scale(1.05);
+        }
+        .rating-buttons .selected {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .details-page {
+            display: flex;
+            gap: 2rem;
+        }
+        .details-page img {
+            width: 300px;
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .movie-details {
+            flex: 1;
+        }
+        .movie-details h2 {
+            font-size: 2.5rem;
+            margin-top: 0;
+            color: #fff;
+        }
+        .movie-details p {
+            color: #ccc;
+        }
+        .profile-scores p {
+            background-color: #2a2a2a;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+        #search-form {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        #search-form input {
+            flex-grow: 1;
+        }
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .nav {
+                margin-top: 1rem;
+            }
+            .details-page {
+                flex-direction: column;
+            }
+            .details-page img {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Cine Sugestão</h1>
+            <nav class="nav">
+                <a href="#recommended" id="nav-recommended">Recomendados</a>
+                <a href="#explore" id="nav-explore">Explorar</a>
+                <a href="#watchlist" id="nav-watchlist">Minha Lista</a>
+                <a href="#my_scores" id="nav-my-scores">Minhas Notas</a>
+                <a href="#search" id="nav-search">Busca</a>
+            </nav>
+        </header>
+        <main class="content" id="app-content">
+            <!-- O conteúdo das páginas será renderizado aqui pelo JavaScript -->
+        </main>
+    </div>
+
+    <script>
+        // --- Dados do Aplicativo (simulando um banco de dados em memória) ---
+        const GENRES = [
+            "Ação", "Aventura", "Comédia", "Drama", "Ficção Científica",
+            "Fantasia", "Suspense", "Terror", "Animação", "Documentário",
+            "Romance", "Crime", "Mistério", "Musical", "História"
+        ];
+
+        const MOVIES = {
+            1: {
+                title: "A Origem",
+                poster_url: "https://m.media-amazon.com/images/I/91t79wB58TL._AC_SL1500_.jpg",
+                genres: ["Ação", "Ficção Científica", "Suspense"],
+                description: "Dom Cobb é um ladrão com a rara habilidade de invadir os sonhos das pessoas e roubar seus segredos do subconsciente. Ele recebe uma oferta para plantar uma ideia em vez de roubá-la.",
+                popularity: 0.95
+            },
+            2: {
+                title: "Interestelar",
+                poster_url: "https://m.media-amazon.com/images/I/914Tz2i0GEL._AC_SL1500_.jpg",
+                genres: ["Ficção Científica", "Aventura", "Drama"],
+                description: "Em um futuro distópico, a humanidade luta para sobreviver. Um grupo de exploradores viaja através de um buraco de minhoca no espaço em uma tentativa de garantir a sobrevivência da raça humana.",
+                popularity: 0.92
+            },
+            3: {
+                title: "O Poderoso Chefão",
+                poster_url: "https://m.media-amazon.com/images/I/81+S12mH8wL._AC_SL1500_.jpg",
+                genres: ["Crime", "Drama"],
+                description: "O patriarca da família do crime Corleone transfere o controle de seu império clandestino para seu filho relutante.",
+                popularity: 0.98
+            },
+            4: {
+                title: "A Rede Social",
+                poster_url: "https://m.media-amazon.com/images/I/719h+n1P46L._AC_SL1500_.jpg",
+                genres: ["Drama", "História"],
+                description: "A história de como o Facebook foi criado e a disputa legal que se seguiu entre Mark Zuckerberg e seus antigos parceiros de negócio.",
+                popularity: 0.88
+            },
+            5: {
+                title: "Pulp Fiction",
+                poster_url: "https://m.media-amazon.com/images/I/715b+a1tU3L._AC_SL1500_.jpg",
+                genres: ["Crime", "Drama"],
+                description: "As vidas de dois assassinos de aluguel, um boxeador, a esposa de um gangster e um par de assaltantes de restaurante se entrelaçam em quatro contos de violência e redenção.",
+                popularity: 0.94
+            },
+            6: {
+                title: "E.T. O Extraterrestre",
+                poster_url: "https://m.media-amazon.com/images/I/61G+4t-f05L._AC_SL1200_.jpg",
+                genres: ["Ficção Científica", "Fantasia"],
+                description: "Uma criatura alienígena é acidentalmente deixada para trás na Terra e faz amizade com um garoto solitário.",
+                popularity: 0.85
+            },
+            7: {
+                title: "Os Incríveis",
+                poster_url: "https://m.media-amazon.com/images/I/81577dY1cIL._AC_SL1500_.jpg",
+                genres: ["Animação", "Ação", "Aventura"],
+                description: "Uma família de super-heróis tenta viver uma vida suburbana normal, mas são forçados a voltar à ação para salvar o mundo.",
+                popularity: 0.90
+            },
+            8: {
+                title: "A Viagem de Chihiro",
+                poster_url: "https://m.media-amazon.com/images/I/8140JkK9b6L._AC_SL1500_.jpg",
+                genres: ["Animação", "Fantasia"],
+                description: "Uma garota de 10 anos se perde em um mundo de espíritos, deuses e bruxas, e deve trabalhar em uma casa de banho para sobreviver e encontrar uma maneira de voltar para casa.",
+                popularity: 0.91
+            },
+            9: {
+                title: "O Senhor dos Anéis: A Sociedade do Anel",
+                poster_url: "https://m.media-amazon.com/images/I/71uIqYf75EL._AC_SL1494_.jpg",
+                genres: ["Aventura", "Fantasia"],
+                description: "Um jovem hobbit herda um anel e embarca em uma jornada épica para destruí-lo e salvar a Terra Média do Senhor dos Anéis.",
+                popularity: 0.96
+            },
+            10: {
+                title: "O Fabuloso Destino de Amélie Poulain",
+                poster_url: "https://m.media-amazon.com/images/I/811F3h3h5WL._AC_SL1500_.jpg",
+                genres: ["Comédia", "Romance"],
+                description: "Amélie, uma garçonete inocente e ingênua em Paris, decide mudar a vida das pessoas ao seu redor para melhor.",
+                popularity: 0.87
+            },
+            11: {
+                title: "Parasita",
+                poster_url: "https://m.media-amazon.com/images/I/71Y8+J0t9pL._AC_SL1500_.jpg",
+                genres: ["Drama", "Suspense", "Comédia"],
+                description: "A família Ki-taek, desempregada, se infiltra na rica família Park e um incidente inesperado ameaça destruir sua nova vida.",
+                popularity: 0.93
+            },
+            12: {
+                title: "Whiplash: Em Busca da Perfeição",
+                poster_url: "https://m.media-amazon.com/images/I/71jQx54g2SL._AC_SL1500_.jpg",
+                genres: ["Drama", "Musical"],
+                description: "Um jovem baterista talentoso é levado ao limite por seu professor de música obsessivo em uma das melhores escolas de música do país.",
+                popularity: 0.89
+            },
+            13: {
+                title: "O Iluminado",
+                poster_url: "https://m.media-amazon.com/images/I/910q32n8q+L._AC_SL1500_.jpg",
+                genres: ["Terror", "Suspense"],
+                description: "Um escritor e sua família se tornam os zeladores de um hotel isolado durante o inverno. Ele é gradualmente consumido pela loucura enquanto forças sobrenaturais se manifestam.",
+                popularity: 0.91
+            },
+            14: {
+                title: "O Resgate do Soldado Ryan",
+                poster_url: "https://m.media-amazon.com/images/I/918u-f+zI7L._AC_SL1500_.jpg",
+                genres: ["Ação", "Drama", "História"],
+                description: "Em meio à invasão da Normandia durante a Segunda Guerra Mundial, um esquadrão de soldados é enviado em uma missão para resgatar um paraquedista.",
+                popularity: 0.90
+            },
+            15: {
+                title: "Toy Story",
+                poster_url: "https://m.media-amazon.com/images/I/71gVl1H2gBL._AC_SL1500_.jpg",
+                genres: ["Animação", "Comédia"],
+                description: "Um boneco de cowboy é aterrorizado por um novo e moderno brinquedo espacial que se torna o favorito de seu dono.",
+                popularity: 0.88
+            },
+            16: {
+                title: "Matrix",
+                poster_url: "https://m.media-amazon.com/images/I/81+m42B9xPL._AC_SL1500_.jpg",
+                genres: ["Ação", "Ficção Científica"],
+                description: "Um programador de computador descobre que a realidade que conhece é uma simulação de computador criada por máquinas inteligentes.",
+                popularity: 0.94
+            }
+        };
+
+        // --- Lógica de Recomendação e Gerenciamento de Estado ---
+
+        function sigmoid(x) {
+            return 1 / (1 + Math.exp(-x));
+        }
+
+        function calculateUserProfile(ratings) {
+            const userProfile = GENRES.reduce((acc, genre) => {
+                acc[genre] = 0;
+                return acc;
+            }, {});
+
+            if (Object.keys(ratings).length === 0) {
+                return userProfile;
+            }
+
+            for (const [movieId, rating] of Object.entries(ratings)) {
+                const movie = MOVIES[movieId];
+                if (movie) {
+                    const weight = (rating - 3) / 2;
+                    movie.genres.forEach(genre => {
+                        userProfile[genre] += weight;
+                    });
+                }
+            }
+            
+            const maxVal = Math.max(...Object.values(userProfile).map(Math.abs)) || 1;
+            for (const genre in userProfile) {
+                userProfile[genre] /= maxVal;
+            }
+
+            return userProfile;
+        }
+        
+        function getRecommendations(userProfile, ratedMoviesIds) {
+            const recommendations = [];
+            const allMovieIds = Object.keys(MOVIES).map(Number);
+            const unratedMoviesIds = allMovieIds.filter(id => !ratedMoviesIds.includes(id));
+
+            for (const movieId of unratedMoviesIds) {
+                const movie = MOVIES[movieId];
+                let score = 0;
+                movie.genres.forEach(genre => {
+                    score += userProfile[genre] || 0;
+                });
+                score += movie.popularity * 0.5;
+                if (movie.genres.length > 1) {
+                    score -= (movie.genres.length - 1) * 0.1;
+                }
+                
+                const probability = Math.round(sigmoid(score) * 100);
+                const reasons = Object.keys(userProfile).filter(genre => userProfile[genre] > 0.1).map(genre => `Combina com seu interesse em ${genre}`);
+                const reason = reasons.length ? reasons[Math.floor(Math.random() * reasons.length)] : "Baseado em seus gostos";
+                
+                recommendations.push({
+                    id: movieId,
+                    title: movie.title,
+                    poster_url: movie.poster_url,
+                    probability: probability,
+                    reason: reason,
+                    description: movie.description,
+                    genres: movie.genres
+                });
+            }
+
+            recommendations.sort((a, b) => b.probability - a.probability);
+            return recommendations.slice(0, 10);
+        }
+
+        // --- Gerenciamento de Páginas e UI ---
+
+        let state = {
+            currentPage: 'home',
+            user: JSON.parse(localStorage.getItem('user')) || null,
+            ratings: JSON.parse(localStorage.getItem('ratings')) || {},
+            userProfile: JSON.parse(localStorage.getItem('userProfile')) || {},
+            watchlist: JSON.parse(localStorage.getItem('watchlist')) || [],
+            exploreFilter: '',
+            searchQuery: ''
+        };
+
+        const appContent = document.getElementById('app-content');
+
+        function navigate(page, params = {}) {
+            window.location.hash = page;
+            state.currentPage = page;
+            Object.assign(state, params);
+            renderPage();
+        }
+
+        window.onhashchange = () => {
+            const hash = window.location.hash.substring(1);
+            if (hash) {
+                const [page, id] = hash.split('/');
+                navigate(page, { movieId: id ? parseInt(id) : null });
+            } else {
+                navigate('home');
+            }
+        };
+
+        function renderPage() {
+            appContent.innerHTML = '';
+            
+            if (!state.user && state.currentPage !== 'home') {
+                navigate('home');
+                return;
+            }
+
+            switch(state.currentPage) {
+                case 'home':
+                    renderHomePage();
+                    break;
+                case 'recommended':
+                    renderRecommendedPage();
+                    break;
+                case 'explore':
+                    renderExplorePage();
+                    break;
+                case 'details':
+                    renderDetailsPage(state.movieId);
+                    break;
+                case 'watchlist':
+                    renderWatchlistPage();
+                    break;
+                case 'my_scores':
+                    renderMyScoresPage();
+                    break;
+                case 'search':
+                    renderSearchPage();
+                    break;
+            }
+        }
+
+        function renderHomePage() {
+            const html = `
+                <div class="form-card">
+                    <h2>Bem-vindo(a) ao Cine Sugestão!</h2>
+                    <p>Para começar, nos conte um pouco sobre você e seus gêneros favoritos. Isso nos ajudará a encontrar os filmes perfeitos!</p>
+                    <form id="register-form">
+                        <div class="input-group">
+                            <label for="name">Nome:</label>
+                            <input type="text" id="name" name="name" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="age">Idade:</label>
+                            <input type="number" id="age" name="age" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Escolha 3 ou mais gêneros:</label>
+                            <div class="genre-grid">
+                                ${GENRES.map(genre => `<div class="genre-item" data-genre="${genre}">${genre}</div>`).join('')}
+                            </div>
+                        </div>
+                        <button type="submit" class="btn">Cadastrar e Ver Recomendações</button>
+                    </form>
+                </div>
+            `;
+            appContent.innerHTML = html;
+
+            const form = document.getElementById('register-form');
+            const genreItems = document.querySelectorAll('.genre-item');
+            let selectedGenres = new Set();
+
+            genreItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const genre = item.dataset.genre;
+                    if (selectedGenres.has(genre)) {
+                        selectedGenres.delete(genre);
+                        item.classList.remove('selected');
+                    } else {
+                        selectedGenres.add(genre);
+                        item.classList.add('selected');
+                    }
+                });
+            });
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (selectedGenres.size < 3) {
+                    alert('Por favor, selecione pelo menos 3 gêneros.');
+                    return;
+                }
+                const name = document.getElementById('name').value;
+                const age = document.getElementById('age').value;
+                state.user = { name, age, initialGenres: Array.from(selectedGenres) };
+                state.ratings = {};
+                state.watchlist = [];
+                state.userProfile = GENRES.reduce((acc, genre) => {
+                    acc[genre] = selectedGenres.has(genre) ? 1 : 0;
+                    return acc;
+                }, {});
+                localStorage.setItem('user', JSON.stringify(state.user));
+                localStorage.setItem('ratings', JSON.stringify(state.ratings));
+                localStorage.setItem('userProfile', JSON.stringify(state.userProfile));
+                navigate('recommended');
+            });
+        }
+
+        function renderRecommendedPage() {
+            const recommendations = getRecommendations(state.userProfile, Object.keys(state.ratings).map(Number));
+            const html = `
+                <h2>Filmes Recomendados para Você</h2>
+                <p>Olá, ${state.user.name}! Aqui estão os filmes que achamos que você vai gostar, baseados no seu perfil e nas suas avaliações.</p>
+                <div class="movie-card-grid">
+                    ${recommendations.map(movie => `
+                        <div class="movie-card">
+                            <a href="#details/${movie.id}">
+                                <img src="${movie.poster_url}" alt="Poster de ${movie.title}" onerror="this.onerror=null;this.src='https://placehold.co/200x300/1e1e1e/888?text=Sem+Poster';">
+                            </a>
+                            <div class="movie-info">
+                                <h3>${movie.title}</h3>
+                                <p class="tag-row">
+                                    <span class="tag">Chance: ${movie.probability}%</span>
+                                </p>
+                                <p>${movie.reason}</p>
+                                <div class="rating-buttons" data-movie-id="${movie.id}">
+                                    ${[1, 2, 3, 4, 5].map(i => `<button data-rating="${i}">${i}</button>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            appContent.innerHTML = html;
+            addRatingEventListeners();
+        }
+
+        function renderExplorePage() {
+            const genresHTML = GENRES.map(genre => `<option value="${genre}" ${state.exploreFilter === genre ? 'selected' : ''}>${genre}</option>`).join('');
+            const moviesToShow = state.exploreFilter ? Object.values(MOVIES).filter(m => m.genres.includes(state.exploreFilter)) : Object.values(MOVIES);
+            const sortedMovies = moviesToShow.sort((a, b) => b.popularity - a.popularity);
+            
+            const moviesHTML = sortedMovies.map(movie => `
+                <div class="movie-card">
+                    <a href="#details/${Object.keys(MOVIES).find(key => MOVIES[key] === movie)}">
+                        <img src="${movie.poster_url}" alt="Poster de ${movie.title}" onerror="this.onerror=null;this.src='https://placehold.co/200x300/1e1e1e/888?text=Sem+Poster';">
+                    </a>
+                    <div class="movie-info">
+                        <h3>${movie.title}</h3>
+                        <p>Avalie este filme:</p>
+                        <div class="rating-buttons" data-movie-id="${Object.keys(MOVIES).find(key => MOVIES[key] === movie)}">
+                            ${[1, 2, 3, 4, 5].map(i => `<button data-rating="${i}">${i}</button>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            const html = `
+                <h2>Explorar Filmes</h2>
+                <p>Use os filtros para encontrar novos filmes. Você pode avaliá-los aqui mesmo!</p>
+                <div class="input-group">
+                    <label for="genre-filter">Filtrar por Gênero:</label>
+                    <select id="genre-filter" name="genre">
+                        <option value="">Todos</option>
+                        ${genresHTML}
+                    </select>
+                </div>
+                <div class="movie-card-grid">
+                    ${moviesHTML}
+                </div>
+            `;
+            appContent.innerHTML = html;
+            
+            document.getElementById('genre-filter').addEventListener('change', (e) => {
+                state.exploreFilter = e.target.value;
+                renderExplorePage();
+            });
+            addRatingEventListeners();
+        }
+
+        function renderDetailsPage(movieId) {
+            const movie = MOVIES[movieId];
+            if (!movie) {
+                appContent.innerHTML = "<h2>Filme não encontrado.</h2>";
+                return;
+            }
+
+            const userRating = state.ratings[movieId] || 'Não avaliado';
+            const similarMovies = getSimilarMovies(movieId);
+
+            const similarHTML = similarMovies.map(similar => `
+                <div class="movie-card" onclick="navigate('details', { movieId: ${similar.id} })">
+                    <img src="${similar.poster_url}" alt="Poster de ${similar.title}" onerror="this.onerror=null;this.src='https://placehold.co/200x300/1e1e1e/888?text=Sem+Poster';">
+                    <div class="movie-info">
+                        <h3>${similar.title}</h3>
+                        <p class="tag-row"><span class="tag">Similaridade: ${similar.probability}%</span></p>
+                    </div>
+                </div>
+            `).join('');
+
+            const html = `
+                <div class="details-page">
+                    <img src="${movie.poster_url}" alt="Poster de ${movie.title}" onerror="this.onerror=null;this.src='https://placehold.co/300x450/1e1e1e/888?text=Sem+Poster';">
+                    <div class="movie-details">
+                        <h2>${movie.title}</h2>
+                        <p><strong>Gêneros:</strong> ${movie.genres.join(', ')}</p>
+                        <p><strong>Sinopse:</strong> ${movie.description}</p>
+                        <p><strong>Sua Nota:</strong> ${userRating}</p>
+                        <div class="rating-buttons" data-movie-id="${movieId}">
+                            ${[1, 2, 3, 4, 5].map(i => `<button data-rating="${i}" class="${userRating == i ? 'selected' : ''}">${i}</button>`).join('')}
+                        </div>
+                        <h3 style="margin-top: 2rem;">Filmes Similares</h3>
+                        <div class="movie-card-grid">
+                            ${similarHTML}
+                        </div>
+                    </div>
+                </div>
+            `;
+            appContent.innerHTML = html;
+            addRatingEventListeners();
+        }
+
+        function getSimilarMovies(movieId) {
+            const movie = MOVIES[movieId];
+            const ratedMoviesIds = Object.keys(state.ratings).map(Number);
+            const otherMovies = Object.keys(MOVIES).filter(mid => Number(mid) !== movieId && !ratedMoviesIds.includes(Number(mid)));
+            
+            const similarMovies = otherMovies.map(mid => {
+                const m = MOVIES[mid];
+                let score = 0;
+                movie.genres.forEach(genre => {
+                    if (m.genres.includes(genre)) {
+                        score += 1;
+                    }
+                });
+
+                const probability = Math.round(sigmoid(score) * 100);
+                return { id: Number(mid), title: m.title, poster_url: m.poster_url, probability };
+            }).filter(m => m.probability > 0);
+            
+            similarMovies.sort((a, b) => b.probability - a.probability);
+            return similarMovies.slice(0, 5);
+        }
+
+        function renderWatchlistPage() {
+            const watchlistMovies = state.watchlist.map(id => MOVIES[id]).filter(Boolean);
+            const moviesHTML = watchlistMovies.map(movie => `
+                <div class="movie-card">
+                    <a href="#details/${Object.keys(MOVIES).find(key => MOVIES[key] === movie)}">
+                        <img src="${movie.poster_url}" alt="Poster de ${movie.title}" onerror="this.onerror=null;this.src='https://placehold.co/200x300/1e1e1e/888?text=Sem+Poster';">
+                    </a>
+                    <div class="movie-info">
+                        <h3>${movie.title}</h3>
+                        <p>Avalie este filme:</p>
+                        <div class="rating-buttons" data-movie-id="${Object.keys(MOVIES).find(key => MOVIES[key] === movie)}">
+                            ${[1, 2, 3, 4, 5].map(i => `<button data-rating="${i}">${i}</button>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            const html = `
+                <h2>Minha Lista (Watchlist)</h2>
+                <p>Aqui estão os filmes que você adicionou à sua lista para assistir mais tarde.</p>
+                ${watchlistMovies.length > 0 ? `<div class="movie-card-grid">${moviesHTML}</div>` : `<p>Sua lista está vazia. Adicione filmes para assistir mais tarde na página de detalhes!</p>`}
+            `;
+            appContent.innerHTML = html;
+            addRatingEventListeners();
+        }
+
+        function renderMyScoresPage() {
+            const userProfile = calculateUserProfile(state.ratings);
+            const scoresHTML = Object.entries(userProfile).map(([genre, score]) => `
+                <p><strong>${genre}:</strong> ${(score * 100).toFixed(2)}%</p>
+            `).join('');
+
+            const html = `
+                <h2>Minhas Notas e Perfil de Gêneros</h2>
+                <p>Este é o seu perfil de gostos. As pontuações abaixo refletem sua afinidade com cada gênero, baseada nas suas avaliações.</p>
+                <div class="profile-scores">
+                    ${scoresHTML}
+                </div>
+            `;
+            appContent.innerHTML = html;
+        }
+
+        function renderSearchPage() {
+            const query = state.searchQuery.toLowerCase();
+            const searchResults = Object.entries(MOVIES).filter(([id, movie]) => movie.title.toLowerCase().includes(query));
+            const moviesHTML = searchResults.map(([id, movie]) => `
+                <div class="movie-card">
+                    <a href="#details/${id}">
+                        <img src="${movie.poster_url}" alt="Poster de ${movie.title}" onerror="this.onerror=null;this.src='https://placehold.co/200x300/1e1e1e/888?text=Sem+Poster';">
+                    </a>
+                    <div class="movie-info">
+                        <h3>${movie.title}</h3>
+                        <p>Avalie este filme:</p>
+                        <div class="rating-buttons" data-movie-id="${id}">
+                            ${[1, 2, 3, 4, 5].map(i => `<button data-rating="${i}">${i}</button>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            const html = `
+                <h2>Busca de Filmes</h2>
+                <form id="search-form">
+                    <input type="text" id="query" name="query" value="${state.searchQuery}" placeholder="Buscar por título..." required>
+                    <button type="submit" class="btn">Buscar</button>
+                </form>
+                ${query && searchResults.length === 0 ? `<p>Nenhum filme encontrado para "${state.searchQuery}".</p>` : ''}
+                <div class="movie-card-grid">
+                    ${moviesHTML}
+                </div>
+            `;
+            appContent.innerHTML = html;
+            
+            document.getElementById('search-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                state.searchQuery = document.getElementById('query').value;
+                renderSearchPage();
+            });
+            addRatingEventListeners();
+        }
+
+        function addRatingEventListeners() {
+            document.querySelectorAll('.rating-buttons').forEach(container => {
+                const movieId = container.dataset.movieId;
+                container.querySelectorAll('button').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const rating = parseInt(button.dataset.rating);
+                        state.ratings[movieId] = rating;
+                        localStorage.setItem('ratings', JSON.stringify(state.ratings));
+                        state.userProfile = calculateUserProfile(state.ratings);
+                        localStorage.setItem('userProfile', JSON.stringify(state.userProfile));
+                        
+                        // Re-render a página para refletir a nova avaliação
+                        renderPage();
+                    });
+                });
+            });
+        }
+
+        // --- Inicialização da Aplicação ---
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.location.hash) {
+                const [page, id] = window.location.hash.substring(1).split('/');
+                navigate(page, { movieId: id ? parseInt(id) : null });
+            } else if (state.user) {
+                navigate('recommended');
+            } else {
+                navigate('home');
+            }
+        });
+    </script>
+</body>
+</html>
